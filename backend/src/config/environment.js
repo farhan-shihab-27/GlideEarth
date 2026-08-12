@@ -67,6 +67,12 @@ const config = {
     maxRequests: getEnvInt('RATE_LIMIT_MAX_REQUESTS', 200),
   },
 
+  // --- JWT ---
+  jwt: {
+    secret: getEnv('JWT_SECRET'),
+    expiresIn: getEnv('JWT_EXPIRES_IN', '7d'),
+  },
+
   // --- CORS ---
   corsOrigin: getEnv('CORS_ORIGIN', 'http://localhost:3000'),
 };

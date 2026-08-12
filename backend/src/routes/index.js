@@ -13,19 +13,28 @@
  */
 
 const { Router } = require('express');
+const authRoutes = require('../modules/auth/auth.routes');
+const categoryRoutes = require('../modules/categories/category.routes');
 const productRoutes = require('../modules/products/product.routes');
+const orderRoutes = require('../modules/orders/order.routes');
 
 const router = Router();
 
 // ── Module Route Mounting ────────────────────────────────────────────
 
+// Public: Authentication (login)
+router.use('/auth', authRoutes);
+
+// Public: Storefront data
+router.use('/categories', categoryRoutes);
 router.use('/products', productRoutes);
 
+// Public: Checkout flow
+router.use('/orders', orderRoutes);
+
 // Future modules:
-// router.use('/categories', categoryRoutes);
-// router.use('/orders', orderRoutes);
 // router.use('/customers', customerRoutes);
 // router.use('/coupons', couponRoutes);
-// router.use('/admin', adminRoutes);
+// router.use('/admin', adminRoutes);    // Protected by authenticate + requireRole middleware
 
 module.exports = router;
