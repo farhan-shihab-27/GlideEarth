@@ -181,13 +181,14 @@ class OrderRepository {
 
   /**
    * Fetches a full order and its items by the auto-generated order number.
-   * 
+   *
    * @param {string} orderNumber - The human-readable order number.
    * @returns {Promise<Object|null>} The complete order object.
-   * 
+   *
    * @description
    * This is a NON-transactional read operation. It uses the global connection pool (db.query)
    * since it doesn't need to hold locks or group writes.
+   * Now includes coupon information if one was applied.
    */
   async findOrderByNumber(orderNumber) {
     const orderQuery = `
@@ -199,23 +200,109 @@ class OrderRepository {
       WHERE order_number = $1
     `;
     const orderResult = await db.query(orderQuery, [orderNumber]);
-    
+
     if (orderResult.rows.length === 0) {
       return null;
     }
 
     const order = orderResult.rows[0];
 
+    // Fetch line items
     const itemsQuery = `
       SELECT product_name_snapshot, product_sku_snapshot, quantity, unit_price_at_purchase, subtotal
       FROM order_items
       WHERE order_id = $1
     `;
     const itemsResult = await db.query(itemsQuery, [order.id]);
-    
     order.items = itemsResult.rows;
+
+    // Fetch applied coupon (if any)
+    const couponQuery = `
+      SELECT code_snapshot, discount_applied
+      FROM order_coupons
+      WHERE order_id = $1
+    `;
+    const couponResult = await db.query(couponQuery, [order.id]);
+    order.coupon = couponResult.rows.length > 0 ? couponResult.rows[0] : null;
+
     return order;
+  }
+
+  // ═══════════════════════════════════════════════════════════════════
+  // COUPON INTEGRATION METHODS (Used within checkout transaction)
+  // ═══════════════════════════════════════════════════════════════════
+
+  /**
+   * Fetches an active, non-deleted coupon by its code within a transaction.
+   *
+   * @param {Object} client - The dedicated pg client from the transaction pool.
+   * @param {string} code - The uppercase coupon code.
+   * @returns {Promise<Object|null>} The coupon record or null.
+   *
+   * @description
+   * Uses `FOR UPDATE` to lock the coupon row during the transaction,
+   * preventing a race condition where two concurrent checkouts both
+   * read times_used=4 when usage_limit=5, both pass validation,
+   * and both increment — resulting in times_used=6 exceeding the limit.
+   */
+  async findActiveCouponByCode(client, code) {
+    const query = `
+      SELECT id, code, coupon_type, value, min_order_amount, max_discount_amount,
+             usage_limit, times_used, is_active, valid_from, valid_until
+      FROM coupons
+      WHERE UPPER(code) = $1
+        AND deleted_at IS NULL
+        AND is_active = TRUE
+      FOR UPDATE
+    `;
+    const result = await client.query(query, [code]);
+    return result.rows[0] || null;
+  }
+
+  /**
+   * Inserts a record into the order_coupons junction table.
+   * Snapshots the coupon code and discount amount for historical accuracy.
+   *
+   * @param {Object} client - The transaction client.
+   * @param {Object} data - Coupon application data.
+   * @param {string} data.orderId - UUID of the order.
+   * @param {string} data.couponId - UUID of the coupon.
+   * @param {string} data.codeSnapshot - The coupon code at time of use.
+   * @param {number} data.discountApplied - Calculated discount amount.
+   * @returns {Promise<Object>} The inserted order_coupons record.
+   */
+  async insertOrderCoupon(client, { orderId, couponId, codeSnapshot, discountApplied }) {
+    const query = `
+      INSERT INTO order_coupons (order_id, coupon_id, code_snapshot, discount_applied)
+      VALUES ($1, $2, $3, $4)
+      RETURNING id, order_id, coupon_id, code_snapshot, discount_applied
+    `;
+    const result = await client.query(query, [orderId, couponId, codeSnapshot, discountApplied]);
+    return result.rows[0];
+  }
+
+  /**
+   * Atomically increments a coupon's usage counter by 1.
+   *
+   * @param {Object} client - The transaction client.
+   * @param {string} couponId - UUID of the coupon to increment.
+   * @returns {Promise<void>}
+   *
+   * @description
+   * Safe from race conditions because:
+   * 1. The coupon row is already locked via `FOR UPDATE` in findActiveCouponByCode.
+   * 2. The increment happens inside the same transaction.
+   * 3. If the transaction rolls back, the increment is undone.
+   */
+  async incrementCouponUsage(client, couponId) {
+    const query = `
+      UPDATE coupons
+      SET times_used = times_used + 1
+      WHERE id = $1
+    `;
+    await client.query(query, [couponId]);
   }
 }
 
 module.exports = new OrderRepository();
+

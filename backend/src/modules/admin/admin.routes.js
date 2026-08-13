@@ -19,6 +19,8 @@
  * ────────────────
  *   /api/v1/admin/products   → Admin product CRUD (create, update, soft delete)
  *   /api/v1/admin/orders     → Admin order management (list, status updates)
+ *   /api/v1/admin/coupons    → Coupon CRUD (create, list, update, soft delete)
+ *   /api/v1/admin/stats      → Dashboard analytics (revenue, counts, low stock)
  * ============================================================================
  */
 
@@ -28,6 +30,8 @@ const { authenticate, requireRole } = require('../../middleware/auth');
 // Sub-module routes
 const adminProductRoutes = require('./products/admin-product.routes');
 const adminOrderRoutes = require('./orders/admin-order.routes');
+const adminCouponRoutes = require('./coupons/admin-coupon.routes');
+const statsRoutes = require('./analytics/stats.routes');
 
 const router = Router();
 
@@ -40,10 +44,11 @@ router.use(requireRole('super_admin', 'admin', 'editor'));
 // ── Mount admin sub-modules ──────────────────────────────────────────
 router.use('/products', adminProductRoutes);
 router.use('/orders', adminOrderRoutes);
+router.use('/coupons', adminCouponRoutes);
+router.use('/stats', statsRoutes);
 
 // Future admin modules:
 // router.use('/customers', adminCustomerRoutes);
-// router.use('/coupons', adminCouponRoutes);
-// router.use('/analytics', adminAnalyticsRoutes);
 
 module.exports = router;
+

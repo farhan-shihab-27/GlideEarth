@@ -6,34 +6,42 @@ const orderRepository = require('./order.repository');
 const UUID_V4_REGEX = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[4][0-9a-fA-F]{3}-[89ABab][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$/i;
 
 /**
- * Order Service
- * 
- * Implements business logic and orchestrates database transactions for the checkout flow.
- * In the Controller-Service-Repository pattern, this acts as the "thick" layer where
- * all critical validation, calculations, and transactional logic reside.
+ * ============================================================================
+ * GLIDEEARTH — ORDER SERVICE (Business Logic Layer)
+ * ============================================================================
+ * Implements business logic and orchestrates database transactions for the
+ * checkout flow. This is the "thick" layer where all critical validation,
+ * calculations, coupon processing, and transactional logic reside.
+ *
+ * TRANSACTION LIFECYCLE:
+ * ──────────────────────
+ * 1. PRE-TRANSACTION: Request payload is heavily validated.
+ * 2. BEGIN: `db.transaction` acquires a dedicated pg client.
+ * 3. LOCKING: `FOR UPDATE` locks product rows against concurrent purchases.
+ * 4. COUPON: Validate and calculate discount within the lock scope.
+ * 5. BUSINESS RULES: Stock checks and price calculations on locked data.
+ * 6. MUTATIONS: Customer, address, order, items, coupon records written.
+ * 7. STOCK DEDUCTION: Inventory decreased safely.
+ * 8. COMMIT/ROLLBACK: Automatic via the `db.transaction` wrapper.
+ * ============================================================================
  */
 class OrderService {
   /**
    * Processes a complete checkout request within a single PostgreSQL transaction.
-   * 
+   *
    * @param {Object} checkoutData - Structured checkout data from the client.
-   * @returns {Promise<Object>} The confirmed order object.
-   * 
-   * @description
-   * Transaction Lifecycle:
-   * 1. PRE-TRANSACTION: Request payload is heavily validated.
-   * 2. BEGIN: The `db.transaction` helper acquires a dedicated pg client and starts a transaction.
-   * 3. LOCKING: `FOR UPDATE` is used to lock the relevant product rows in the database.
-   * 4. BUSINESS RULES: Stock checks and price calculations are performed securely on the locked data.
-   * 5. MUTATIONS: Customers, addresses, orders, and order items are sequentially written.
-   * 6. STOCK DEDUCTION: Product stock is decreased safely.
-   * 7. COMMIT/ROLLBACK: If everything succeeds, the transaction commits. If ANY error occurs,
-   *    an exception is thrown and the transaction rolls back, undoing all partial changes instantly.
+   * @param {Object} checkoutData.customer - Customer identity (fullName, phoneNumber, email).
+   * @param {Object} checkoutData.shippingAddress - Shipping destination snapshot.
+   * @param {Array}  checkoutData.items - Cart line items [{ productId, quantity }].
+   * @param {string} checkoutData.paymentMethod - 'cod' or 'online'.
+   * @param {string} [checkoutData.customerNotes] - Optional order notes.
+   * @param {string} [checkoutData.couponCode] - Optional coupon code to apply.
+   * @returns {Promise<Object>} The confirmed order object with discount details.
    */
   async checkout(checkoutData) {
-    const { customer, shippingAddress, items, paymentMethod, customerNotes } = checkoutData;
+    const { customer, shippingAddress, items, paymentMethod, customerNotes, couponCode } = checkoutData;
 
-    // 1. Initial Data Validation (Before entering the database transaction)
+    // ─── 1. PRE-TRANSACTION VALIDATION ──────────────────────────────
     if (!customer || !customer.fullName || !customer.phoneNumber) {
       throw AppError.badRequest('Customer fullName and phoneNumber are required.');
     }
@@ -59,15 +67,15 @@ class OrderService {
       throw AppError.badRequest('Invalid paymentMethod. Must be "cod" or "online".');
     }
 
-    // 2. Start PostgreSQL Transaction
+    // ─── 2. START POSTGRESQL TRANSACTION ─────────────────────────────
     return await db.transaction(async (client) => {
-      
+
       const productIds = items.map(item => item.productId);
-      
-      // 3. Acquire Row-Level Locks and Fetch Current DB State
+
+      // ─── 3. ACQUIRE ROW-LEVEL LOCKS ─────────────────────────────
       const products = await orderRepository.findProductsByIds(client, productIds);
-      
-      // 4. Verify all requested products exist and are active
+
+      // Verify all requested products exist and are active
       if (products.length !== productIds.length) {
         throw AppError.badRequest('One or more products are unavailable or do not exist.');
       }
@@ -82,7 +90,7 @@ class OrderService {
       const orderItemsToInsert = [];
       const stockDeductions = [];
 
-      // 5. Stock Check and Price Calculation securely evaluated on the backend
+      // ─── 4. STOCK CHECK & PRICE CALCULATION ─────────────────────
       for (const item of items) {
         const product = productMap[item.productId];
 
@@ -114,12 +122,68 @@ class OrderService {
         });
       }
 
+      // ─── 5. COUPON VALIDATION & DISCOUNT CALCULATION ────────────
+      // This runs INSIDE the transaction to guarantee atomicity:
+      // If any later step fails (e.g., stock deduction), the coupon
+      // usage increment is automatically rolled back.
+      let discountAmount = 0;
+      let couponRecord = null;
+
+      if (couponCode) {
+        const trimmedCode = couponCode.trim().toUpperCase();
+
+        // Fetch the coupon (active, non-deleted only)
+        couponRecord = await orderRepository.findActiveCouponByCode(client, trimmedCode);
+
+        if (!couponRecord) {
+          throw AppError.badRequest('Invalid or expired coupon code.');
+        }
+
+        // Date range validation
+        const now = new Date();
+        if (couponRecord.valid_from && new Date(couponRecord.valid_from) > now) {
+          throw AppError.badRequest('This coupon is not yet active.');
+        }
+        if (couponRecord.valid_until && new Date(couponRecord.valid_until) < now) {
+          throw AppError.badRequest('This coupon has expired.');
+        }
+
+        // Usage limit validation
+        if (couponRecord.usage_limit !== null && couponRecord.times_used >= couponRecord.usage_limit) {
+          throw AppError.badRequest('This coupon has reached its maximum usage limit.');
+        }
+
+        // Minimum order amount validation
+        if (couponRecord.min_order_amount !== null && orderSubtotal < parseFloat(couponRecord.min_order_amount)) {
+          throw AppError.badRequest(
+            `Minimum order amount of ${couponRecord.min_order_amount} required to use this coupon.`
+          );
+        }
+
+        // Calculate discount based on coupon type
+        if (couponRecord.coupon_type === 'percentage') {
+          discountAmount = orderSubtotal * (parseFloat(couponRecord.value) / 100);
+
+          // Cap at max_discount_amount if set
+          if (couponRecord.max_discount_amount !== null) {
+            discountAmount = Math.min(discountAmount, parseFloat(couponRecord.max_discount_amount));
+          }
+        } else if (couponRecord.coupon_type === 'fixed_amount') {
+          discountAmount = parseFloat(couponRecord.value);
+        }
+
+        // Discount can never exceed the subtotal
+        discountAmount = Math.min(discountAmount, orderSubtotal);
+
+        // Round to 2 decimal places for currency precision
+        discountAmount = Math.round(discountAmount * 100) / 100;
+      }
+
       const shippingCharge = 0; // Configurable or dynamic later
-      const discountAmount = 0; // Could evaluate coupon logic here later
       const totalAmount = orderSubtotal - discountAmount + shippingCharge;
 
-      // 6. Execute Mutations sequentially inside the transaction lock
-      
+      // ─── 6. EXECUTE MUTATIONS SEQUENTIALLY ──────────────────────
+
       // Upsert Customer (create or update existing by phone)
       const customerRecord = await orderRepository.upsertCustomer(client, customer);
 
@@ -151,19 +215,38 @@ class OrderService {
       // Bulk Insert Order Items with snapshots
       await orderRepository.insertOrderItems(client, orderRecord.id, orderItemsToInsert);
 
-      // Deduct inventory reliably (safe from race conditions due to earlier FOR UPDATE locks)
+      // ─── 7. COUPON JUNCTION RECORD & USAGE INCREMENT ────────────
+      // Only if a coupon was successfully validated and applied
+      if (couponRecord && discountAmount > 0) {
+        await orderRepository.insertOrderCoupon(client, {
+          orderId: orderRecord.id,
+          couponId: couponRecord.id,
+          codeSnapshot: couponRecord.code,
+          discountApplied: discountAmount
+        });
+
+        await orderRepository.incrementCouponUsage(client, couponRecord.id);
+      }
+
+      // ─── 8. STOCK DEDUCTION ─────────────────────────────────────
+      // Safe from race conditions due to earlier FOR UPDATE locks
       await orderRepository.deductStock(client, stockDeductions);
 
-      // Transaction completes cleanly here. Commit happens automatically via the `db.transaction` wrapper.
-      return orderRecord;
+      // Transaction completes cleanly here. Commit happens automatically.
+      return {
+        ...orderRecord,
+        discount_amount: discountAmount,
+        coupon_applied: couponRecord ? couponRecord.code : null
+      };
     });
   }
 
   /**
    * Retrieves an order by its public facing order number.
-   * 
-   * @param {string} orderNumber - The unique order string (e.g. ORD-12345).
+   *
+   * @param {string} orderNumber - The unique order string (e.g. GE-20260812-00001).
    * @returns {Promise<Object>} The complete order and item data.
+   * @throws {AppError} 400 if invalid, 404 if not found.
    */
   async getOrderByNumber(orderNumber) {
     if (!orderNumber || typeof orderNumber !== 'string') {
@@ -171,7 +254,7 @@ class OrderService {
     }
 
     const order = await orderRepository.findOrderByNumber(orderNumber);
-    
+
     if (!order) {
       throw AppError.notFound('Order not found.');
     }
