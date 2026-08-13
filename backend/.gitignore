@@ -24,3 +24,6 @@ Thumbs.db
 # Build
 dist/
 build/
+
+# Uploaded files (product images stored locally)
+uploads/

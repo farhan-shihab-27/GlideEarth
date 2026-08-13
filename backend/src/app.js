@@ -130,6 +130,17 @@ app.get('/health', async (_req, res) => {
 });
 
 // ============================================================================
+// 5.5 STATIC FILE SERVING — Uploaded Product Images
+// ============================================================================
+
+// Serve the /uploads directory as static files.
+// Product images saved locally are accessible at: /uploads/products/{filename}
+// This line must come BEFORE the API routes but AFTER compression so
+// images are served gzip-compressed when the client supports it.
+const path = require('path');
+app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+
+// ============================================================================
 // 6. APPLICATION ROUTES
 // ============================================================================
 

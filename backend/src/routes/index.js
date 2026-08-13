@@ -17,6 +17,7 @@ const authRoutes = require('../modules/auth/auth.routes');
 const categoryRoutes = require('../modules/categories/category.routes');
 const productRoutes = require('../modules/products/product.routes');
 const orderRoutes = require('../modules/orders/order.routes');
+const adminRoutes = require('../modules/admin/admin.routes');
 
 const router = Router();
 
@@ -32,9 +33,11 @@ router.use('/products', productRoutes);
 // Public: Checkout flow
 router.use('/orders', orderRoutes);
 
+// Protected: Admin dashboard (JWT + role enforcement applied inside admin.routes.js)
+router.use('/admin', adminRoutes);
+
 // Future modules:
 // router.use('/customers', customerRoutes);
 // router.use('/coupons', couponRoutes);
-// router.use('/admin', adminRoutes);    // Protected by authenticate + requireRole middleware
 
 module.exports = router;
