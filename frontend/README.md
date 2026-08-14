@@ -1,36 +1,68 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Glideearth — Frontend
+
+The Phase 5 frontend for **Glideearth**, an e-commerce storefront for bespoke,
+handcrafted lighters, resin jewelry, and keychains. Built for a premium,
+buttery-smooth shopping experience.
+
+## Tech Stack
+
+- **Framework:** [Next.js 16](https://nextjs.org) (App Router, Turbopack)
+- **Styling:** [Tailwind CSS 3](https://tailwindcss.com) with a custom
+  earthy design system (beige / terracotta / charcoal)
+- **Animation:** [Framer Motion](https://motion.dev) for scroll reveals,
+  hover states, and micro-interactions
+- **Icons:** [Lucide React](https://lucide.dev)
+- **Language:** TypeScript
 
 ## Getting Started
 
-First, run the development server:
+Install dependencies and run the dev server:
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000) to view the app.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Project Structure
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```
+app/
+  layout.tsx          Root layout — fonts, Navbar, Footer, metadata
+  page.tsx             Landing page composition
+  globals.css          Tailwind directives + global base styles
+components/
+  Navbar.tsx           Sticky/responsive navbar with mobile menu & cart badge
+  Footer.tsx           Site footer
+  Hero.tsx             Landing page hero section
+  FeaturedCategories.tsx  "Shop by Category" bento grid
+  LatestArrivals.tsx   Newest product cards on a dark showcase band
+  NewsletterBanner.tsx Email capture CTA band
+  ui/
+    Button.tsx         Reusable CTA button (link or button element)
+    Reveal.tsx          Scroll-triggered fade/slide-in wrapper (Framer Motion)
+    SectionHeading.tsx  Eyebrow + serif heading + description block
+lib/
+  data.ts              Mock categories, products & nav links
+  utils.ts             `cn()` class merge helper + price formatter
+```
 
-## Learn More
+## Design System
 
-To learn more about Next.js, take a look at the following resources:
+Defined in `tailwind.config.js`:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- **Colors:** `beige`, `terracotta`, `charcoal` scales (50–950), plus `cream`
+- **Fonts:** Playfair Display (`font-serif`, headings) & Inter
+  (`font-sans`, body/UI) — loaded via `next/font/google` in `app/layout.tsx`
+- **Shadows:** `shadow-soft`, `shadow-card`, `shadow-card-hover`,
+  `shadow-glass`, `shadow-glow`
+- **Motion:** `animate-float`, `animate-float-slow`, `animate-blob` keyframes
+  for ambient hero decoration
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Notes
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- All product/category imagery currently points to royalty-free Unsplash
+  photos as placeholders — swap `lib/data.ts` image URLs for real product
+  photography once available.
+- All UI copy is written in English per project requirements.
