@@ -76,13 +76,13 @@ const productController = {
   },
 
   /**
-   * GET /api/v1/products/:slug
+   * GET /api/v1/products/:id
    *
-   * Fetch a single product by its URL slug, including all images.
+   * Fetch a single product by its slug OR its UUID, including all images.
    * This powers the Product Detail Page (PDP).
    *
    * Route Parameters:
-   *   :slug  - URL-safe product identifier (e.g., "custom-painted-lighter-01")
+   *   :id  - URL-safe product slug (e.g., "flame-vintage-lighter") or UUID
    *
    * Response:
    *   {
@@ -91,8 +91,8 @@ const productController = {
    *     "data": { product with images[] }
    *   }
    */
-  async getProductBySlug(req, res) {
-    const product = await productService.getProductBySlug(req.params.slug);
+  async getProductByIdentifier(req, res) {
+    const product = await productService.getProductByIdentifier(req.params.id);
 
     return sendSuccess(res, {
       message: 'Product retrieved successfully.',

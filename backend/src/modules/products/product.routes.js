@@ -9,8 +9,8 @@
  * ROUTE ORDER MATTERS:
  * ────────────────────
  * Static routes (e.g., /featured) must be defined BEFORE dynamic
- * parameter routes (e.g., /:slug), otherwise Express will treat
- * "featured" as a slug value.
+ * parameter routes (e.g., /:id), otherwise Express will treat
+ * "featured" as an identifier value.
  * ============================================================================
  */
 
@@ -39,9 +39,9 @@ router.get('/', asyncHandler(productController.getProducts));
 // ── Dynamic parameter routes last ────────────────────────────────────
 
 /**
- * GET /api/v1/products/:slug
- * Fetch a single product by slug (Product Detail Page).
+ * GET /api/v1/products/:id
+ * Fetch a single product by slug or UUID (Product Detail Page).
  */
-router.get('/:slug', asyncHandler(productController.getProductBySlug));
+router.get('/:id', asyncHandler(productController.getProductByIdentifier));
 
 module.exports = router;

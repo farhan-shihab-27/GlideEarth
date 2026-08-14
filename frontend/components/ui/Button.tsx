@@ -12,6 +12,7 @@ type BaseProps = {
   children: ReactNode;
   icon?: ReactNode;
   iconPosition?: "left" | "right";
+  disabled?: boolean;
 };
 
 type ButtonAsLink = BaseProps & {
@@ -53,11 +54,13 @@ export default function Button({
   children,
   icon,
   iconPosition = "right",
+  disabled = false,
 }: ButtonProps) {
   const classes = cn(
     "group relative inline-flex items-center justify-center gap-2 rounded-full font-medium tracking-wide transition-all duration-300 ease-smooth active:scale-[0.97]",
     variantStyles[variant],
     sizeStyles[size],
+    disabled && "pointer-events-none opacity-50 active:scale-100",
     className
   );
 
@@ -79,14 +82,14 @@ export default function Button({
 
   if (href) {
     return (
-      <Link href={href} onClick={onClick} className={classes}>
+      <Link href={href} onClick={onClick} className={classes} aria-disabled={disabled}>
         {content}
       </Link>
     );
   }
 
   return (
-    <button type={type} onClick={onClick} className={classes}>
+    <button type={type} onClick={onClick} disabled={disabled} className={classes}>
       {content}
     </button>
   );

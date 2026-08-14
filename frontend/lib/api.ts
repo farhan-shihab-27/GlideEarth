@@ -52,6 +52,39 @@ export interface ApiProduct {
   primary_image_alt: string | null;
 }
 
+export interface ApiProductImage {
+  id: string;
+  image_url: string;
+  alt_text: string | null;
+  is_primary: boolean;
+  sort_order: number;
+}
+
+export interface ApiProductDetail {
+  id: string;
+  name: string;
+  slug: string;
+  sku: string;
+  short_description: string | null;
+  description: string | null;
+  regular_price: number;
+  discount_price: number | null;
+  effective_price: number;
+  stock_quantity: number;
+  low_stock_threshold: number;
+  weight_grams: number | null;
+  is_featured: boolean;
+  rating: number;
+  badge: string | null;
+  meta_title: string | null;
+  meta_description: string | null;
+  created_at: string;
+  category_id: string;
+  category_name: string;
+  category_slug: string;
+  images: ApiProductImage[];
+}
+
 /**
  * Fetch helper that talks to the Glideearth API and unwraps the standard
  * `{ success, message, data }` response envelope. Throws `ApiError` for
@@ -94,4 +127,13 @@ export function getCategories(): Promise<ApiCategory[]> {
 /** GET /products/featured — curated products for homepage showcases. */
 export function getFeaturedProducts(limit = 4): Promise<ApiProduct[]> {
   return apiFetch<ApiProduct[]>(`/products/featured?limit=${limit}`);
+}
+
+/**
+ * GET /products/:id — a single product for the Product Detail Page.
+ * Accepts either a slug (preferred, SEO-friendly URLs) or a UUID.
+ * Throws `ApiError` with `status: 404` when the product doesn't exist.
+ */
+export function getProductByIdentifier(identifier: string): Promise<ApiProductDetail> {
+  return apiFetch<ApiProductDetail>(`/products/${encodeURIComponent(identifier)}`);
 }

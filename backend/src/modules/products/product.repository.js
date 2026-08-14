@@ -132,18 +132,24 @@ const productRepository = {
   },
 
   /**
-   * Fetch a single product by slug, including ALL images and category info.
-   * Used for the Product Detail Page (PDP) — the second step in the
-   * ad-click → browse → PDP → checkout funnel.
+   * Fetch a single product by its slug OR its UUID primary key, including
+   * ALL images and category info. Used for the Product Detail Page (PDP)
+   * — the second step in the ad-click → browse → PDP → checkout funnel.
+   *
+   * Accepting either identifier keeps storefront URLs SEO-friendly
+   * (`/product/flame-vintage-lighter`) while still letting internal
+   * callers (admin tools, cart/order line items) resolve a product by its
+   * immutable UUID.
    *
    * QUERY PLAN:
-   * - Hits `idx_products_slug` (partial B-Tree index) for O(log n) lookup.
+   * - Hits `idx_products_slug` (partial B-Tree index) for slug lookups,
+   *   or the primary key index when a UUID is supplied.
    * - Joins all images sorted by sort_order.
    *
-   * @param {string} slug - The URL-safe product identifier.
+   * @param {string} identifier - A product slug or UUID.
    * @returns {Promise<object|null>} Product with images, or null if not found.
    */
-  async findBySlug(slug) {
+  async findByIdentifier(identifier) {
     // First: fetch the product with its category
     const productQuery = `
       SELECT
@@ -157,6 +163,7 @@ const productRepository = {
         p.discount_price,
         COALESCE(p.discount_price, p.regular_price) AS effective_price,
         p.stock_quantity,
+        p.low_stock_threshold,
         p.weight_grams,
         p.is_featured,
         p.rating,
@@ -170,12 +177,12 @@ const productRepository = {
       FROM products p
       JOIN categories c
         ON c.id = p.category_id
-      WHERE p.slug = $1
+      WHERE (p.slug = $1 OR p.id::text = $1)
         AND p.deleted_at IS NULL
         AND p.is_active = TRUE
     `;
 
-    const { rows: [product] } = await db.query(productQuery, [slug]);
+    const { rows: [product] } = await db.query(productQuery, [identifier]);
 
     if (!product) return null;
 

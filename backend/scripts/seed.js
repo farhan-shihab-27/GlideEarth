@@ -60,6 +60,8 @@ const PRODUCTS = [
     slug: 'flame-vintage-lighter',
     sku: 'GE-LTR-0001',
     short_description: 'A hand-engraved vintage-style flame lighter, refillable and built to last.',
+    description:
+      "Every Flame Vintage Lighter begins as a raw brass shell before it ever meets an engraving tool. Our artisans hand-etch each flame motif freehand, so no two lighters carry an identical pattern — yours is the only one quite like it. Built around a reliable refillable butane core with a windproof flame, it's as functional as it is beautiful, equally at home on a nightstand or riding in a jacket pocket for years of daily use. A durable matte finish resists fingerprints and everyday wear, and it ships in a keepsake box that makes it ready to gift.",
     regular_price: 34.99,
     discount_price: null,
     stock_quantity: 40,
@@ -76,6 +78,8 @@ const PRODUCTS = [
     slug: 'ocean-wave-resin-pendant',
     sku: 'GE-JWL-0001',
     short_description: 'A hand-poured resin pendant capturing the swirl of ocean waves.',
+    description:
+      'Cast in small batches, the Ocean Wave Resin Pendant layers deep-blue and seafoam pigments in slow, deliberate pours so each piece captures its own unique swirl — like a wave frozen mid-break. The crystal-clear resin dome is hand-sanded and polished to a glass-like shine, then set in a tarnish-resistant gold-tone bezel with an 18-inch adjustable chain. Lightweight enough for everyday wear, yet striking enough to be the centerpiece of any outfit.',
     regular_price: 36.0,
     discount_price: 28.5,
     stock_quantity: 25,
@@ -92,6 +96,8 @@ const PRODUCTS = [
     slug: 'heart-charm-keychain',
     sku: 'GE-KEY-0001',
     short_description: 'A polished metal heart charm keychain, perfect for gifting.',
+    description:
+      "A simple, sturdy keepsake: the Heart Charm Keychain is cut from solid zinc alloy, hand-polished to a mirror finish, then sealed with a protective coating that keeps it looking new through daily use in a pocket or bag. The heavy-duty split ring and lobster clasp are built to hold keys, bag charms, or a small pouch without stretching or snapping. Simple, sentimental, and one of our most gifted pieces — it's a small reminder carried every day.",
     regular_price: 16.0,
     discount_price: null,
     stock_quantity: 60,
@@ -108,6 +114,8 @@ const PRODUCTS = [
     slug: 'rainbow-resin-statement-ring',
     sku: 'GE-JWL-0002',
     short_description: 'A bold, colorful statement ring hand-cast in vibrant resin.',
+    description:
+      'Hand-poured in small batches, the Rainbow Resin Statement Ring layers vivid pigments in a gradient swirl so every ring is one of a kind — no two color patterns ever pour exactly alike. The chunky, faceted silhouette sits comfortably on the finger while making a bold visual statement, cast around a nickel-free adjustable band that fits most sizes. Cured under UV light for extra durability and shine, it resists yellowing and holds its color for years of wear.',
     regular_price: 22.0,
     discount_price: null,
     stock_quantity: 30,
@@ -158,11 +166,11 @@ async function seed() {
 
       const { rows: [row] } = await client.query(
         `INSERT INTO products (
-           category_id, name, slug, sku, short_description,
+           category_id, name, slug, sku, short_description, description,
            regular_price, discount_price, stock_quantity,
            rating, badge, is_featured, is_active, sort_order
          )
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, TRUE, $12)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, TRUE, $13)
          RETURNING id`,
         [
           categoryId,
@@ -170,6 +178,7 @@ async function seed() {
           product.slug,
           product.sku,
           product.short_description,
+          product.description,
           product.regular_price,
           product.discount_price,
           product.stock_quantity,

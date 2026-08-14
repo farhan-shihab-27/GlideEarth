@@ -98,22 +98,22 @@ const productService = {
   },
 
   /**
-   * Get a single product by its URL slug, including all images.
+   * Get a single product by its URL slug or UUID, including all images.
    * Used for the Product Detail Page (PDP).
    *
-   * @param {string} slug - The product's URL-safe identifier.
+   * @param {string} identifier - The product's slug (preferred, SEO-friendly) or UUID.
    * @returns {Promise<object>} The full product object with images.
    * @throws {AppError} 404 if the product doesn't exist or is inactive.
    */
-  async getProductBySlug(slug) {
-    if (!slug || typeof slug !== 'string') {
-      throw AppError.badRequest('Product slug is required.');
+  async getProductByIdentifier(identifier) {
+    if (!identifier || typeof identifier !== 'string') {
+      throw AppError.badRequest('Product identifier is required.');
     }
 
-    const product = await productRepository.findBySlug(slug.trim().toLowerCase());
+    const product = await productRepository.findByIdentifier(identifier.trim().toLowerCase());
 
     if (!product) {
-      throw AppError.notFound(`Product "${slug}" not found.`);
+      throw AppError.notFound(`Product "${identifier}" not found.`);
     }
 
     return product;
