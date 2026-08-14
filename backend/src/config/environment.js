@@ -52,6 +52,12 @@ const config = {
     user: getEnv('DB_USER', 'postgres'),
     password: getEnv('DB_PASSWORD'),
 
+    // Managed cloud Postgres providers (Aiven, RDS, Supabase, etc.) require
+    // TLS and reject plaintext connections. Defaults to `true` for any
+    // non-localhost host so cloud connections work out of the box, but can
+    // be forced either way via DB_SSL.
+    ssl: getEnv('DB_SSL', String(!['localhost', '127.0.0.1'].includes(getEnv('DB_HOST', 'localhost')))) === 'true',
+
     // Connection pool tuning knobs
     pool: {
       max: getEnvInt('DB_POOL_MAX', 20),

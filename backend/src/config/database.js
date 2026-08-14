@@ -29,8 +29,17 @@
  * ============================================================================
  */
 
-const { Pool } = require('pg');
+const { Pool, types } = require('pg');
 const config = require('./environment');
+
+// ============================================================================
+// TYPE PARSING — Return NUMERIC columns as JS numbers, not strings
+// ============================================================================
+// `pg` returns NUMERIC/DECIMAL as strings by default to avoid float
+// precision loss on arbitrary-precision values. Our prices/ratings are
+// well within float-safe range, and the frontend expects real numbers
+// (e.g. for Intl.NumberFormat), so we opt in to numeric parsing globally.
+types.setTypeParser(1700, (value) => (value === null ? null : parseFloat(value)));
 
 // ============================================================================
 // POOL INSTANTIATION
@@ -60,6 +69,14 @@ const pool = new Pool({
   // How long a client waits to acquire a connection from the pool.
   // Fail fast at 5s — better to return a 503 than hang the request.
   connectionTimeoutMillis: config.db.pool.connectionTimeoutMs,
+
+  // --- TLS ---
+  // Managed providers like Aiven terminate plaintext connections outright
+  // ("no pg_hba.conf entry ... no encryption"). `rejectUnauthorized: false`
+  // trusts the provider's certificate chain without requiring a bundled CA
+  // file — acceptable here since the connection string/credentials
+  // themselves are the actual secret boundary.
+  ssl: config.db.ssl ? { rejectUnauthorized: false } : false,
 
   // --- Connection-Level Defaults ---
   // Applied to every new connection when it's created.

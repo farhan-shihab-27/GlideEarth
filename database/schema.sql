@@ -139,6 +139,9 @@ CREATE TABLE products (
     is_featured     BOOLEAN         NOT NULL DEFAULT FALSE,
     is_active       BOOLEAN         NOT NULL DEFAULT TRUE,
     sort_order      INTEGER         NOT NULL DEFAULT 0,
+    -- Storefront social proof & merchandising badges (e.g. "New", "Bestseller")
+    rating          NUMERIC(2, 1)   NOT NULL DEFAULT 0,
+    badge           VARCHAR(30),
     meta_title      VARCHAR(255),
     meta_description VARCHAR(500),
     created_at      TIMESTAMPTZ     NOT NULL DEFAULT NOW(),
@@ -155,7 +158,8 @@ CREATE TABLE products (
     CONSTRAINT chk_products_discount_lt_regular CHECK (
         discount_price IS NULL OR discount_price < regular_price
     ),
-    CONSTRAINT chk_products_stock_quantity  CHECK (stock_quantity >= 0)
+    CONSTRAINT chk_products_stock_quantity  CHECK (stock_quantity >= 0),
+    CONSTRAINT chk_products_rating          CHECK (rating >= 0 AND rating <= 5)
 );
 
 -- Hot-path: storefront product listing by category
