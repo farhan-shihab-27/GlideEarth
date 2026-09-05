@@ -9,9 +9,10 @@ const { db } = require('../../config');
 
 class CategoryRepository {
   /**
-   * Fetch all active, non-deleted categories.
+   * Fetch all active, non-deleted categories (flat list, all levels).
+   * The service layer is responsible for assembling the tree.
    * Hits the partial index `idx_categories_active`.
-   * @returns {Promise<Array<Object>>} List of category records.
+   * @returns {Promise<Array<Object>>} Flat list of all category records.
    */
   async findAllActive() {
     const sql = `
@@ -41,8 +42,27 @@ class CategoryRepository {
   }
 
   /**
+   * Fetch all active direct children of a given parent category ID.
+   * Used by the category page to build the sub-category grid.
+   * @param {string} parentId - The UUID of the parent category.
+   * @returns {Promise<Array<Object>>} List of child category records.
+   */
+  async findChildrenByParentId(parentId) {
+    const sql = `
+      SELECT id, name, slug, description, image_url, parent_id, sort_order 
+      FROM categories 
+      WHERE parent_id = $1 AND deleted_at IS NULL AND is_active = TRUE 
+      ORDER BY sort_order ASC, name ASC
+    `;
+    const { rows } = await db.query(sql, [parentId]);
+    return rows;
+  }
+
+  /**
    * Count active products per category for storefront nav badges.
-   * @returns {Promise<Array<Object>>} List of category IDs with product_count.
+   * Counts products whose direct category_id matches — i.e., products
+   * assigned to sub-categories contribute to those sub-categories' counts.
+   * @returns {Promise<Array<Object>>} List of { id, product_count } rows.
    */
   async countProductsByCategory() {
     const sql = `

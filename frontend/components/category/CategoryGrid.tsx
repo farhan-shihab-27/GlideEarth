@@ -9,6 +9,15 @@ import { cn } from "@/lib/utils";
 
 const easeSmooth = [0.22, 1, 0.36, 1] as const;
 
+/**
+ * CategoryGrid — used on the Homepage for the legacy bento-grid.
+ * Links now route to /category/:slug instead of /shop/:slug.
+ *
+ * NOTE: On the homepage, FeaturedCategories.tsx renders the new massive
+ * full-width blocks and no longer uses this component. CategoryGrid is
+ * retained here for any page that still needs the animated card grid
+ * (e.g., a /shop page) without modification.
+ */
 export default function CategoryGrid({ categories }: { categories: ApiCategory[] }) {
   return (
     <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
@@ -25,7 +34,7 @@ export default function CategoryGrid({ categories }: { categories: ApiCategory[]
             className={cn(isLarge && "sm:col-span-2 lg:col-span-2")}
           >
             <Link
-              href={`/shop/${category.slug}`}
+              href={`/category/${category.slug}`}
               className={cn(
                 "group relative block h-full w-full overflow-hidden rounded-4xl shadow-card transition-shadow duration-500 hover:shadow-card-hover",
                 isLarge ? "aspect-[16/10]" : "aspect-[4/5]"

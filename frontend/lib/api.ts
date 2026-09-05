@@ -119,9 +119,39 @@ async function apiFetch<T>(path: string): Promise<T> {
   return body.data;
 }
 
-/** GET /categories — active storefront categories with live product counts. */
+/**
+ * GET /categories
+ * Returns the full nested tree: root categories with their children[]
+ * populated and product_count enriched. Powers the homepage blocks and
+ * the navbar category list.
+ */
 export function getCategories(): Promise<ApiCategory[]> {
   return apiFetch<ApiCategory[]>("/categories");
+}
+
+/**
+ * GET /categories/:slug
+ * Returns a single category enriched with children[] (sub-categories) and
+ * product_count. Powers the `/category/[slug]` page:
+ *   - Root category → children[] populated → render sub-category grid.
+ *   - Leaf category → children[] empty → render product grid.
+ */
+export function getCategoryBySlug(slug: string): Promise<ApiCategory> {
+  return apiFetch<ApiCategory>(`/categories/${encodeURIComponent(slug)}`);
+}
+
+/**
+ * GET /products?category=:slug&limit=:limit
+ * Fetch a paginated list of products for a specific leaf category page.
+ * Falls back gracefully if the query parameter is not supported.
+ */
+export function getProductsByCategory(
+  categorySlug: string,
+  limit = 24
+): Promise<ApiProduct[]> {
+  return apiFetch<ApiProduct[]>(
+    `/products?category=${encodeURIComponent(categorySlug)}&limit=${limit}`
+  );
 }
 
 /** GET /products/featured — curated products for homepage showcases. */
