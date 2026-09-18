@@ -68,7 +68,7 @@ export default function Hero() {
 
           <Reveal delay={0.3}>
             <div className="mt-9 flex flex-wrap items-center gap-4">
-              <Button href="/shop" size="lg" icon={<ArrowRight className="h-4 w-4" />}>
+              <Button href="/#categories" size="lg" icon={<ArrowRight className="h-4 w-4" />}>
                 Shop Collection
               </Button>
               <Button href="/about" variant="outline" size="lg">

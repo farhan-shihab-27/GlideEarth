@@ -3,10 +3,10 @@ import { AtSign, Mail, MapPin, Phone, Rss, Share2, Sparkles } from "lucide-react
 import { navLinks } from "@/lib/data";
 
 const shopLinks = [
-  { label: "Custom Lighters", href: "/shop/lighters" },
-  { label: "Resin Jewelry", href: "/shop/jewelry" },
-  { label: "Keychains", href: "/shop/keychains" },
-  { label: "Gift Sets", href: "/shop/gift-sets" },
+  { label: "Lighter", href: "/category/lighter" },
+  { label: "Jewelry", href: "/category/jewelry" },
+  { label: "Accessories", href: "/category/accessories" },
+  { label: "Home & Living", href: "/category/home-living" },
 ];
 
 export default function Footer() {

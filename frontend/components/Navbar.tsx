@@ -29,16 +29,16 @@ export default function Navbar() {
   return (
     <header
       className={cn(
-        "fixed inset-x-0 top-0 z-50 transition-all duration-500 ease-smooth",
+        "fixed inset-x-0 top-0 z-50 isolate transition-all duration-500 ease-smooth",
         scrolled
           ? "bg-cream/80 shadow-soft backdrop-blur-lg"
-          : "bg-transparent"
+          : "bg-cream/0"
       )}
     >
       <nav className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4 lg:px-10">
         <Link
           href="/"
-          className="flex items-center gap-2 font-serif text-xl font-semibold text-charcoal-900"
+          className="relative z-50 flex items-center gap-2 font-serif text-xl font-semibold text-charcoal-900"
         >
           <span className="flex h-9 w-9 items-center justify-center rounded-full bg-terracotta-500 text-cream shadow-glow">
             <Sparkles className="h-[18px] w-[18px]" strokeWidth={2} />
@@ -68,7 +68,7 @@ export default function Navbar() {
               2
             </span>
           </button>
-          <Button href="/shop" size="sm">
+          <Button href="/#categories" size="sm">
             Shop Now
           </Button>
         </div>
@@ -109,7 +109,7 @@ export default function Navbar() {
                 </motion.div>
               ))}
               <div className="mt-3 flex items-center gap-3 px-3">
-                <Button href="/shop" className="flex-1" onClick={() => setMobileOpen(false)}>
+                <Button href="/#categories" className="flex-1" onClick={() => setMobileOpen(false)}>
                   Shop Now
                 </Button>
                 <button

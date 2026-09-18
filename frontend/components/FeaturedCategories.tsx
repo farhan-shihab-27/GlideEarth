@@ -37,7 +37,7 @@ export default async function FeaturedCategories() {
 
   if (failed || rootCategories.length === 0) {
     return (
-      <section className="bg-beige-50 py-24">
+      <section id="categories" className="bg-beige-50 py-24">
         <div className="mx-auto max-w-7xl px-6 text-center text-charcoal-500">
           <p className="font-sans text-base">
             Our collections are being updated — please check back shortly.
@@ -48,7 +48,7 @@ export default async function FeaturedCategories() {
   }
 
   return (
-    <section className="w-full">
+    <section id="categories" className="w-full">
       {/* Section header */}
       <div className="bg-cream py-16 text-center">
         <p className="font-sans text-xs font-semibold uppercase tracking-[0.3em] text-terracotta-600">
